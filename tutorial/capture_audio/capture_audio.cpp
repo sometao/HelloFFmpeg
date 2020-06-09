@@ -1,6 +1,10 @@
-#include <iostream>
-#include "Framework.h"
 
+#include <iostream>
+
+#include <Windows.h>
+#include "al.h"
+#include "alc.h"
+#include "seeker/logger.h"
 #include "seeker/common.h"
 
 #define OUTPUT_WAVE_FILE "Capture.wav"
@@ -23,7 +27,9 @@ typedef struct {
 #pragma pack(pop)
 
 
+
 int main() {
+  seeker::Logger::init("", true);
   ALCdevice *pDevice;
   ALCcontext *pContext;
   ALCdevice *pCaptureDevice;
@@ -38,48 +44,47 @@ int main() {
   // NOTE : This code does NOT setup the Wave Device's Audio Mixer to select a recording input
   // or a recording level.
 
-  // Initialize Framework
-  ALFWInit();
 
-  ALFWprintf("Capture Application\n");
+  printf("Capture Application\n");
 
-  if (!ALFWInitOpenAL()) {
-    ALFWprintf("Failed to initialize OpenAL\n");
-    ALFWShutdown();
-    return 0;
-  }
+  std::cout << "1. ----------------" << std::endl;
+
+  std::cout << "2. ----------------" << std::endl;
+
+  uint32_t a1 = 0x035816;//219158
+  uint32_t a2 = 0x5622;//22050
+
 
   // Check for Capture Extension support
   pContext = alcGetCurrentContext();
   pDevice = alcGetContextsDevice(pContext);
   if (alcIsExtensionPresent(pDevice, "ALC_EXT_CAPTURE") == AL_FALSE) {
-    ALFWprintf("Failed to detect Capture Extension\n");
-    ALFWShutdownOpenAL();
-    ALFWShutdown();
+    printf("Failed to detect Capture Extension\n");
     return 0;
   }
+  std::cout << "3. ----------------" << std::endl;
 
   // Get list of available Capture Devices
   const ALchar *pDeviceList = alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
   if (pDeviceList) {
-    ALFWprintf("\nAvailable Capture Devices are:-\n");
+    printf("\nAvailable Capture Devices are:-\n");
 
     while (*pDeviceList) {
-      ALFWprintf("%s\n", pDeviceList);
+      printf("%s\n", pDeviceList);
       pDeviceList += strlen(pDeviceList) + 1;
     }
   }
 
   // Get the name of the 'default' capture device
   szDefaultCaptureDevice = alcGetString(NULL, ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
-  ALFWprintf("\nDefault Capture Device is '%s'\n\n", szDefaultCaptureDevice);
+  printf("\nDefault Capture Device is '%s'\n\n", szDefaultCaptureDevice);
 
   // Open the default Capture device to record a 22050Hz 16bit Mono Stream using an internal
   // buffer of BUFFERSIZE Samples (== BUFFERSIZE * 2 bytes)
   pCaptureDevice =
       alcCaptureOpenDevice(szDefaultCaptureDevice, 22050, AL_FORMAT_MONO16, BUFFERSIZE);
   if (pCaptureDevice) {
-    ALFWprintf("Opened '%s' Capture Device\n\n",
+    printf("Opened '%s' Capture Device\n\n",
                alcGetString(pCaptureDevice, ALC_CAPTURE_DEVICE_SPECIFIER));
 
     // Create / open a file for the captured data
@@ -103,6 +108,8 @@ int main() {
     sprintf(sWaveHeader.szData, "data");
     sWaveHeader.lDataSize = 0;
 
+    std::cout << "WAVEHEADER size = " << sizeof(WAVEHEADER) << std::endl;
+
     fwrite(&sWaveHeader, sizeof(WAVEHEADER), 1, pFile);
 
     // Start audio capture
@@ -110,14 +117,15 @@ int main() {
 
     // Record for two seconds or until a key is pressed
     DWORD dwStartTime = timeGetTime();
-    while (!ALFWKeyPress() && (timeGetTime() <= (dwStartTime + 5000))) {
+    while ((timeGetTime() <= (dwStartTime + 5000))) {
       // Release some CPU time ...
       Sleep(1);
 
       // Find out how many samples have been captured
       alcGetIntegerv(pCaptureDevice, ALC_CAPTURE_SAMPLES, 1, &iSamplesAvailable);
 
-      ALFWprintf("Samples available : %d\r", iSamplesAvailable);
+      //printf("Samples available : %d\n", iSamplesAvailable);
+      I_LOG("Samples available: {} ? {}", iSamplesAvailable, (BUFFERSIZE / sWaveHeader.wfex.nBlockAlign));
 
       // When we have enough data to fill our BUFFERSIZE byte buffer, grab the samples
       if (iSamplesAvailable > (BUFFERSIZE / sWaveHeader.wfex.nBlockAlign)) {
@@ -160,17 +168,12 @@ int main() {
 
     fclose(pFile);
 
-    ALFWprintf("\nSaved captured audio data to '%s'\n", OUTPUT_WAVE_FILE);
+    printf("\nSaved captured audio data to '%s'\n", OUTPUT_WAVE_FILE);
 
     // Close the Capture Device
     alcCaptureCloseDevice(pCaptureDevice);
   }
 
-  // Close down OpenAL
-  ALFWShutdownOpenAL();
-
-  // Close down the Framework
-  ALFWShutdown();
 
   return 0;
 }
