@@ -1,11 +1,11 @@
 
 
-
+project("al_framework")
 
 ######################################
 #  capture_audio Information
 ######################################
-message(" ===================== capture_audio Information ======================")
+message(" ===================== ${PROJECT_NAME} Information ======================")
 message(CMAKE_PREFIX_PATH         	  =  ${CMAKE_PREFIX_PATH})
 message(CMAKE_SOURCE_DIR         	    =  ${CMAKE_SOURCE_DIR})
 message(PROJECT_SOURCE_DIR            =  ${PROJECT_SOURCE_DIR})
@@ -30,20 +30,20 @@ message(OpenAL_LIBRARY         	    =  ${OpenAL_LIBRARY})
 
 find_library(WINMM_LIBRARY "Winmm.lib")
 
-add_library(al_framework 
+add_library(${PROJECT_NAME} 
 		"src/Framework.cpp"
 		"src/aldlist.cpp" 
 		"src/CWaves.cpp"
 		"src/LoadOAL.cpp"
 )
 
-target_include_directories( al_framework
+target_include_directories( ${PROJECT_NAME}
 	PUBLIC 
-		${CMAKE_CURRENT_SOURCE_DIR}/include
+		${PROJECT_SOURCE_DIR}/include
 		${OpenAL_INCLUDE_DIR}
 )
 
-target_link_libraries( al_framework
+target_link_libraries( ${PROJECT_NAME}
 	PRIVATE
 		${OpenAL_LIBRARY}
 		${WINMM_LIBRARY}

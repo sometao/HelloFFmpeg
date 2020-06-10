@@ -22,12 +22,13 @@ include(./.SET_LOCAL_PATH.cmake)
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_CXX_FLAGS "-D__STDC_CONSTANT_MACROS")
+set(CMAKE_CXX_FLAGS "-D__STDC_CONSTANT_MACROS" ${CMAKE_CXX_FLAGS})
+set(CMAKE_CXX_FLAGS "/utf-8" ${CMAKE_CXX_FLAGS})
 
 
 
 if(MSVC)
-    SET(CMAKE_CXX_FLAGS "/EHsc")  # deal with MSVC Warning C4530
+    SET(CMAKE_CXX_FLAGS "/EHsc" ${CMAKE_CXX_FLAGS})  # deal with MSVC Warning C4530
 endif(MSVC)
 
 
@@ -59,5 +60,7 @@ configure_file(
 
 add_subdirectory("tutorial/alFramework")
 add_subdirectory("tutorial/capture_audio")
+add_subdirectory("tutorial/muxing")
+add_subdirectory("tutorial/hello")
 
 
