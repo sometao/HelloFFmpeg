@@ -1,5 +1,6 @@
-#include <iostream>
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 
+#include <iostream>
 #include "al.h"
 #include "alc.h"
 #include "seeker/logger.h"
@@ -19,9 +20,8 @@ int main() {
   ALint iSamplesAvailable;
   FILE *pFile;
   ALchar Buffer[BUFFERSIZE];
-  //WAVEHEADER sWaveHeader;
-  ALint iDataSize = 0;
-  ALint iSize;
+
+
 
   const int channels = 1;
   const int sampleRate = 22050;
@@ -61,10 +61,8 @@ int main() {
       alcCaptureOpenDevice(szDefaultCaptureDevice, sampleRate, AL_FORMAT_MONO16, BUFFERSIZE);
 
 
-
   if (pCaptureDevice) {
-    printf("Opened '%s' Capture Device\n\n",
-               alcGetString(pCaptureDevice, ALC_CAPTURE_DEVICE_SPECIFIER));
+    I_LOG("Opened '{}' Capture Device\n\n",  alcGetString(pCaptureDevice, ALC_CAPTURE_DEVICE_SPECIFIER));
     // Create / open a file for the captured data
     void *wavWriter = wav_write_open(OUTPUT_WAVE_FILE, sampleRate, bitsPerSample, channels);
 
@@ -75,12 +73,12 @@ int main() {
     auto dwStartTime = seeker::Time::currentTime();
     while ((seeker::Time::currentTime() <= (dwStartTime + 5000))) {
       // Release some CPU time ...
-      Sleep(1);
+      Sleep(2);
 
       // Find out how many samples have been captured
       alcGetIntegerv(pCaptureDevice, ALC_CAPTURE_SAMPLES, 1, &iSamplesAvailable);
 
-      I_LOG("Samples available: {} ? {}", iSamplesAvailable, (BUFFERSIZE / blockAlign));
+      D_LOG("Samples available: {} ? {}", iSamplesAvailable, (BUFFERSIZE / blockAlign));
 
       // When we have enough data to fill our BUFFERSIZE byte buffer, grab the samples
       if (iSamplesAvailable > (BUFFERSIZE / blockAlign)) {
@@ -89,9 +87,6 @@ int main() {
 
         // Write the audio data to a file
         wav_write_data(wavWriter, (unsigned char *)&Buffer, BUFFERSIZE);
-
-        // Record total amount of data recorded
-        iDataSize += BUFFERSIZE;
       }
     }
 
@@ -105,11 +100,9 @@ int main() {
         alcCaptureSamples(pCaptureDevice, Buffer, BUFFERSIZE / blockAlign);
         wav_write_data(wavWriter, (unsigned char *)&Buffer, BUFFERSIZE);
         iSamplesAvailable -= (BUFFERSIZE / blockAlign);
-        iDataSize += BUFFERSIZE;
       } else {
         alcCaptureSamples(pCaptureDevice, Buffer, iSamplesAvailable);
         wav_write_data(wavWriter, (unsigned char *)&Buffer, iSamplesAvailable * blockAlign);
-        iDataSize += iSamplesAvailable * blockAlign;
         iSamplesAvailable = 0;
       }
     }
