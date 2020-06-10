@@ -49,7 +49,7 @@ extern "C" {
 
 
 
-#define STREAM_DURATION 10.0
+#define STREAM_DURATION 6.0
 #define STREAM_FRAME_RATE 25              /* 25 images/s */
 #define STREAM_PIX_FMT AV_PIX_FMT_YUV420P /* default pix_fmt */
 
@@ -76,27 +76,16 @@ typedef struct OutputStream {
 static void log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt) {
   AVRational *time_base = &fmt_ctx->streams[pkt->stream_index]->time_base;
 
-  // char* x = av_ts_make_string((char[AV_TS_MAX_STRING_SIZE]){0}, pkt->pts);
-  // I_LOG("x={}", x);
-
-  // I_LOG("pts:{} pts_time:{} dts:{} dts_time:{} duration:{} duration_time:{}
-  // stream_index:{}\n",
-  //  av_ts_make_string((char[AV_TS_MAX_STRING_SIZE]){0}, pkt->pts),
-  //  av_ts_make_time_string((char[AV_TS_MAX_STRING_SIZE]){0}, pkt->pts, time_base),
-  //  av_ts_make_string((char[AV_TS_MAX_STRING_SIZE]){0}, pkt->dts),
-  //  av_ts_make_time_string((char[AV_TS_MAX_STRING_SIZE]){0}, pkt->dts, time_base),
-  //  av_ts_make_string((char[AV_TS_MAX_STRING_SIZE]){0}, pkt->duration),
-  //  av_ts_make_time_string((char[AV_TS_MAX_STRING_SIZE]){0}, pkt->duration, time_base),
-  //  pkt->stream_index
-  //  );
 
 
-  // printf("pts:%s pts_time:%s dts:%s dts_time:%s duration:%s duration_time:%s
-  // stream_index:%d\n",
-  //       av_ts2str(pkt->pts), av_ts2timestr(pkt->pts, time_base),
-  //       av_ts2str(pkt->dts), av_ts2timestr(pkt->dts, time_base),
-  //       av_ts2str(pkt->duration), av_ts2timestr(pkt->duration, time_base),
-  //       pkt->stream_index);
+  I_LOG("pts:{} pts_time:{} dts:{} dts_time:{} duration:{} duration_time:{}stream_index:{}",
+        pkt->pts,
+        av_q2d(*time_base) * pkt->pts,
+        pkt->dts,
+        av_q2d(*time_base) * pkt->dts,
+        pkt->duration,
+        av_q2d(*time_base) * pkt->duration,
+        pkt->stream_index);
 }
 
 static int write_frame(AVFormatContext *fmt_ctx, const AVRational *time_base, AVStream *st,
@@ -239,7 +228,9 @@ static void open_audio(AVFormatContext *oc, AVCodec *codec, OutputStream *ost,
   ret = avcodec_open2(c, codec, &opt);
   av_dict_free(&opt);
   if (ret < 0) {
-    // fprintf(stderr, "Could not open audio codec: %s\n", av_err2str(ret));
+    char tmpBuf[AV_ERROR_MAX_STRING_SIZE]{0};
+    av_strerror(ret, tmpBuf, AV_ERROR_MAX_STRING_SIZE);
+    fprintf(stderr, "Could not open audio codec: %s\n", tmpBuf);
     exit(1);
   }
 
@@ -351,6 +342,7 @@ static int write_audio_frame(AVFormatContext *oc, OutputStream *ost) {
       fprintf(stderr, "Error while converting\n");
       exit(1);
     }
+
     frame = ost->frame;
 
     frame->pts = av_rescale_q(ost->samples_count, AVRational{1, c->sample_rate}, c->time_base);
@@ -359,6 +351,9 @@ static int write_audio_frame(AVFormatContext *oc, OutputStream *ost) {
 
   ret = avcodec_encode_audio2(c, &pkt, frame, &got_packet);
   if (ret < 0) {
+    char tmpBuf[AV_ERROR_MAX_STRING_SIZE]{0};
+    av_strerror(ret, tmpBuf, AV_ERROR_MAX_STRING_SIZE);
+    fprintf(stderr, "Error encoding audio frame: %s\n", tmpBuf);
     // fprintf(stderr, "Error encoding audio frame: %s\n", av_err2str(ret));
     exit(1);
   }
@@ -366,7 +361,10 @@ static int write_audio_frame(AVFormatContext *oc, OutputStream *ost) {
   if (got_packet) {
     ret = write_frame(oc, &c->time_base, ost->st, &pkt);
     if (ret < 0) {
-      //fprintf(stderr, "Error while writing audio frame: %s\n", av_err2str(ret));
+      char tmpBuf[AV_ERROR_MAX_STRING_SIZE]{0};
+      av_strerror(ret, tmpBuf, AV_ERROR_MAX_STRING_SIZE);
+      fprintf(stderr, "Error while writing audio frame: %s\n", tmpBuf);
+      // fprintf(stderr, "Error while writing audio frame: %s\n", av_err2str(ret));
       exit(1);
     }
   }
@@ -410,6 +408,9 @@ static void open_video(AVFormatContext *oc, AVCodec *codec, OutputStream *ost,
   ret = avcodec_open2(c, codec, &opt);
   av_dict_free(&opt);
   if (ret < 0) {
+    char tmpBuf[AV_ERROR_MAX_STRING_SIZE]{0};
+    av_strerror(ret, tmpBuf, AV_ERROR_MAX_STRING_SIZE);
+    fprintf(stderr, "Could not open video codec: %s\n", tmpBuf);
     // fprintf(stderr, "Could not open video codec: %s\n", av_err2str(ret));
     exit(1);
   }
@@ -514,6 +515,9 @@ static int write_video_frame(AVFormatContext *oc, OutputStream *ost) {
   /* encode the image */
   ret = avcodec_encode_video2(c, &pkt, frame, &got_packet);
   if (ret < 0) {
+    char tmpBuf[AV_ERROR_MAX_STRING_SIZE]{0};
+    av_strerror(ret, tmpBuf, AV_ERROR_MAX_STRING_SIZE);
+    fprintf(stderr, "Error encoding video frame: %s\n", tmpBuf);
     // fprintf(stderr, "Error encoding video frame: %s\n", av_err2str(ret));
     exit(1);
   }
@@ -525,6 +529,9 @@ static int write_video_frame(AVFormatContext *oc, OutputStream *ost) {
   }
 
   if (ret < 0) {
+    char tmpBuf[AV_ERROR_MAX_STRING_SIZE]{0};
+    av_strerror(ret, tmpBuf, AV_ERROR_MAX_STRING_SIZE);
+    fprintf(stderr, "Error while writing video frame: %s\n", tmpBuf);
     // fprintf(stderr, "Error while writing video frame: %s\n", av_err2str(ret));
     exit(1);
   }
@@ -584,6 +591,9 @@ int main(int argc, char **argv) {
 
   fmt = oc->oformat;
 
+  I_LOG("fmt->name = {}", fmt->name);
+  I_LOG("fmt->long_name = {}", fmt->long_name);
+
   /* Add the audio and video streams using the default format codecs
    * and initialize the codecs. */
   if (fmt->video_codec != AV_CODEC_ID_NONE) {
@@ -609,7 +619,9 @@ int main(int argc, char **argv) {
   if (!(fmt->flags & AVFMT_NOFILE)) {
     ret = avio_open(&oc->pb, filename, AVIO_FLAG_WRITE);
     if (ret < 0) {
-      //fprintf(stderr, "Could not open '%s': %s\n", filename, av_err2str(ret));
+      char tmpBuf[AV_ERROR_MAX_STRING_SIZE]{0};
+      av_strerror(ret, tmpBuf, AV_ERROR_MAX_STRING_SIZE);
+      fprintf(stderr, "Could not open '%s': %s\n", tmpBuf);
       return 1;
     }
   }
@@ -617,7 +629,10 @@ int main(int argc, char **argv) {
   /* Write the stream header, if any. */
   ret = avformat_write_header(oc, &opt);
   if (ret < 0) {
-    //fprintf(stderr, "Error occurred when opening output file: %s\n", av_err2str(ret));
+    char tmpBuf[AV_ERROR_MAX_STRING_SIZE]{0};
+    av_strerror(ret, tmpBuf, AV_ERROR_MAX_STRING_SIZE);
+    fprintf(stderr, "Error occurred when opening output file: %s\n", tmpBuf);
+    // fprintf(stderr, "Error occurred when opening output file: %s\n", av_err2str(ret));
     return 1;
   }
 

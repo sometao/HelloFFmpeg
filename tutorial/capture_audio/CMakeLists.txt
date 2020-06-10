@@ -29,8 +29,10 @@ message(CMAKE_CURRENT_LIST_DIR			=  ${CMAKE_CURRENT_LIST_DIR})
 
 
 add_executable( ${PROJECT_NAME} 
-	"capture_audio.cpp" 
- "include/wav_writer.hpp" "include/wav_reader.hpp")
+	"src/capture_audio_to_wav.cpp" 
+	"src/capture_audio_to_aac.cpp" 
+	"main.cpp"
+)
 
 target_include_directories( ${PROJECT_NAME}
 	PUBLIC 
@@ -43,5 +45,4 @@ target_include_directories( ${PROJECT_NAME}
 target_link_libraries( ${PROJECT_NAME}
 	PUBLIC 
 		${OpenAL_LIBRARY}
-
 )
