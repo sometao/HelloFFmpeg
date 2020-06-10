@@ -214,6 +214,7 @@ static AVFrame *alloc_audio_frame(enum AVSampleFormat sample_fmt, uint64_t chann
   return frame;
 }
 
+
 static void open_audio(AVFormatContext *oc, AVCodec *codec, OutputStream *ost,
                        AVDictionary *opt_arg) {
   AVCodecContext *c;
