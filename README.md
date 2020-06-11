@@ -6,17 +6,18 @@
 
 ### Goals
 - 学习ffmpeg api编程
+- 学习音视频的采集
 
 
 ### 功能
 - 通过麦克风采集音频，并保存成HLS格式
 
 ### TODOs
-- [ ] 采集音频并保存成PCM
-- [ ] 采集音频并保存为aac
-- [ ] 采集音频并保存为mp4 with aac
-- [ ] 采集音频并保存为m3u8
-- [ ] 搭建建议静态文件服务器分发HLS
+- [X] 采集音频并保存成PCM
+- [X] 采集音频并保存为aac
+- [ ] 将openAL采集流程封装成一个类
+- [ ] 将ffmpeg muxing过程封装成一个类
+- [ ] 使用ffmpeg muxing api对音频进行封装
 
 
 

@@ -4,6 +4,22 @@ project ("capture_audio")
 
 
 ######################################
+# ffmpeg lib and include
+######################################
+
+find_path(FFMPEG_INCLUDE_DIR libavcodec/avcodec.h)
+find_library(AVCODEC_LIBRARY avcodec)
+find_library(AVFORMAT_LIBRARY avformat)
+find_library(AVUTIL_LIBRARY avutil)
+find_library(AVDEVICE_LIBRARY avdevice)
+find_library(AVFILTER_LIBRARY avfilter)
+find_library(POSTPROC_LIBRARY postproc)
+find_library(SWRESAMPLE_LIBRARY swresample)
+find_library(SWSCALE_LIBRARY swscale)
+
+
+
+######################################
 #  OpenAL lib setting
 ######################################
 #make sure openAL32.dll is in your PATH.
@@ -39,10 +55,19 @@ target_include_directories( ${PROJECT_NAME}
 		${CMAKE_SOURCE_DIR}/include
 		${PROJECT_SOURCE_DIR}/include
 		${OpenAL_INCLUDE_DIR}
+		${FFMPEG_INCLUDE_DIR}
 
 )
 
 target_link_libraries( ${PROJECT_NAME}
 	PUBLIC 
 		${OpenAL_LIBRARY}
+		${AVCODEC_LIBRARY}
+		${AVFORMAT_LIBRARY}
+		${AVUTIL_LIBRARY}
+		${AVDEVICE_LIBRARY}
+		${AVFILTER_LIBRARY}
+		${POSTPROC_LIBRARY}
+		${SWRESAMPLE_LIBRARY}
+		${SWSCALE_LIBRARY}
 )

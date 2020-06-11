@@ -2,8 +2,9 @@
 
 project("muxing")
 
-# --------------------------------------------------------------------------
-# specify the C++ standard
+######################################
+# ffmpeg lib and include
+######################################
 
 find_path(FFMPEG_INCLUDE_DIR libavcodec/avcodec.h)
 find_library(AVCODEC_LIBRARY avcodec)

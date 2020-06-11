@@ -8,7 +8,22 @@
 #include "wav_reader.hpp"
 #include "wav_writer.hpp"
 
-#define OUTPUT_WAVE_FILE "Capture.wav"
+
+extern "C" {
+#include <libavutil/avassert.h>
+#include <libavutil/channel_layout.h>
+#include <libavutil/opt.h>
+#include <libavutil/mathematics.h>
+#include <libavutil/timestamp.h>
+#include <libavformat/avformat.h>
+#include <libswscale/swscale.h>
+#include "libswresample/swresample.h"
+}
+
+
+
+
+#define OUTPUT_AAC_FILE "Capture.aac"
 #define BUFFERSIZE 4410
 
 int capture_to_aac() {
@@ -64,7 +79,7 @@ int capture_to_aac() {
   if (pCaptureDevice) {
     I_LOG("Opened '{}' Capture Device\n\n",  alcGetString(pCaptureDevice, ALC_CAPTURE_DEVICE_SPECIFIER));
     // Create / open a file for the captured data
-    void *wavWriter = wav_write_open(OUTPUT_WAVE_FILE, sampleRate, bitsPerSample, channels);
+    void *wavWriter = wav_write_open(OUTPUT_AAC_FILE, sampleRate, bitsPerSample, channels);
 
     auto writeSamples = [=](size_t sampleNumber){
       // Consume Samples
@@ -110,7 +125,7 @@ int capture_to_aac() {
     }
 
 
-    I_LOG("Saved captured audio data to {}", OUTPUT_WAVE_FILE);
+    I_LOG("Saved captured audio data to {}", OUTPUT_AAC_FILE);
     wav_write_close(wavWriter);
 
     // Close the Capture Device

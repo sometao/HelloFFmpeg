@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include "seeker/logger.h"
-
+#include "AudioCollector.h"
 
 extern int capture_to_aac();
 extern int capture_to_wav();
