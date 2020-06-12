@@ -15,7 +15,7 @@
 ### TODOs
 - [X] 采集音频并保存成PCM
 - [X] 采集音频并保存为aac
-- [ ] 将openAL采集流程封装成一个类
+- [X] 将openAL采集流程封装成一个类
 - [ ] 将ffmpeg muxing过程封装成一个类
 - [ ] 使用ffmpeg muxing api对音频进行封装
 
