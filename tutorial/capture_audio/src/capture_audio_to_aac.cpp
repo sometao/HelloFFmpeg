@@ -23,7 +23,7 @@ extern "C" {
 
 
 
-#define OUTPUT_AAC_FILE "Capture.aac"
+#define OUTPUT_AAC_FILE "Capture3.aac"
 #define BUFFERSIZE 4410
 
 int capture_to_aac() {

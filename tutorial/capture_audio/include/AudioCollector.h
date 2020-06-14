@@ -72,22 +72,18 @@ class AudioCollector {
         blockAlign(channels_ * bitsPerSample_ / 8),
         deviceName(deviceName_.length() > 0 ? deviceName_ : getDefaultDeviceName()) {
     if (bitsPerSample != 8 && bitsPerSample != 16) {
-      std::string msg = fmt::format(
+      throw std::runtime_error(fmt::format(
           "AudioCollector init failed: bitsPerSample must be 8 or 16, bitsPerSample=[{}] is "
           "not supported.",
-          bitsPerSample);
-      E_LOG(msg);
-      throw std::exception(msg.c_str());
+          bitsPerSample));
     }
 
 
     if (channels != 1 && channels != 2) {
-      std::string msg = fmt::format(
+      throw std::runtime_error(fmt::format(
           "AudioCollector init failed: channels must be 1 or 2, channels=[{}] is not "
           "supported.",
-          channels);
-      E_LOG(msg);
-      throw std::exception(msg.c_str());
+          channels));
     }
 
 
@@ -110,7 +106,7 @@ class AudioCollector {
     } else if (bitsPerSample == 8 && channels == 2) {
       format = AL_FORMAT_STEREO8;
     } else {
-      throw std::exception("It will never happened.");
+      throw std::runtime_error("It will never happened.");
     }
 
     buffer = new uint8_t[internalBufSize];
@@ -123,10 +119,8 @@ class AudioCollector {
                                           internalBufSize);
 
     if (pCaptureDevice == nullptr) {
-      auto msg =
-          fmt::format("AudioCollector init failed: can not open device: {}", deviceName);
-      E_LOG(msg);
-      throw std::exception(msg.c_str());
+      throw std::runtime_error(
+          fmt::format("AudioCollector init failed: can not open device: {}", deviceName));
     }
   }
 
@@ -143,7 +137,7 @@ class AudioCollector {
   size_t captureSamples(uint8_t *buf, size_t bufSize, int sampleNumber) {
     size_t outSize = sampleNumber * blockAlign;
     if (outSize > bufSize) {
-      throw std::exception(
+      throw std::runtime_error(
           fmt::format("bufSize[{}] is too small to get {} samples", bufSize, sampleNumber)
               .c_str());
     }
