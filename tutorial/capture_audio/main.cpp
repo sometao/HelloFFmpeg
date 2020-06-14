@@ -7,12 +7,17 @@
 extern int capture_to_aac();
 extern int capture_to_wav();
 extern int capture_to_wav2();
+extern int capture_to_aac2();
 
-int main() { 
+int main() {
   seeker::Logger::init("", true);
 
+  try {
+    capture_to_aac2();
+  } catch (std::exception ex) {
+    std::cout << "exception: " << ex.what() << std::endl;
+  }
 
-  capture_to_wav2();
+
   return 0;
-
 }

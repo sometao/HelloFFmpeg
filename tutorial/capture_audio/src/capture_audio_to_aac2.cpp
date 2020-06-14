@@ -4,30 +4,29 @@
 #endif
 
 #include <iostream>
+#include <fstream>
 #include "AudioCollector.h"
 #include "seeker/loggerApi.h"
-#include "seeker/common.h"
-#include "wav_reader.hpp"
-#include "wav_writer.hpp"
 #include "AacAdtsEncoder.h"
 
 
-#define OUTPUT_WAVE_FILE "Capture2.wav"
-#define BUFFERSIZE 4410
-
+#define OUTPUT_AAC_FILE "Capture2.aac"
+#define FRAME_SIZE 1024
 
 
 int capture_to_aac2() {
-  ALchar Buffer[BUFFERSIZE];
+  uint8_t buffer[FRAME_SIZE * 2];
 
   const int channels = 1;
   const int sampleRate = 22050;
   const int bitsPerSample = 16;
   const int blockAlign = channels * bitsPerSample / 8;
 
-  AudioCollector audioCollector(BUFFERSIZE, sampleRate, bitsPerSample, channels);
-  AacAdtsEncoder encoder(64000, AV_SAMPLE_FMT_S16, 44100, 1);
-
+  std::cout << "capture_to_aac2 ------- 0 ----------" << std::endl;
+  AacAdtsEncoder encoder(32000, AV_SAMPLE_FMT_FLTP, sampleRate, channels);
+  std::cout << "capture_to_aac2 ------- 1 ----------" << std::endl;
+  AudioCollector audioCollector(FRAME_SIZE * 2 * 4, sampleRate, bitsPerSample, channels);
+  std::cout << "capture_to_aac2 ------- 2 ----------" << std::endl;
 
   audioCollector.open();
 
@@ -35,8 +34,28 @@ int capture_to_aac2() {
   std::cout << "deviceName: " << deviceName << std::endl;
   audioCollector.start();
 
-  void *wavWriter = wav_write_open(OUTPUT_WAVE_FILE, sampleRate, bitsPerSample, channels);
+  // void *wavWriter = wav_write_open(OUTPUT_WAVE_FILE, sampleRate, bitsPerSample, channels);
 
+  size_t pktCount = 0;
+  size_t pktByteCount = 0;
+
+  std::ofstream fout(OUTPUT_AAC_FILE, std::ios::binary);
+
+
+  auto encodeSamplesAndProcess = [&](size_t sampleNumber, bool endOfStream = false) {
+    int dataOut =
+        audioCollector.captureSamples(buffer, sampleNumber * blockAlign, sampleNumber);
+    int gotPkt = encoder.encode(buffer, sampleNumber * blockAlign, endOfStream);
+    if (gotPkt) {
+      AVPacket* pkt = encoder.getPacket();
+      // TODO process pkt.
+      pktCount += 1;
+      fout.write((char*)pkt->data, pkt->size);
+      pktByteCount += pkt->size;
+      av_packet_free(&pkt);
+      D_LOG("encodeSamplesAndProcess pktCount={}, pktByteCount={}", pktCount, pktByteCount);
+    }
+  };
 
   size_t iSamplesAvailable;
   // Record for 5 seconds
@@ -47,14 +66,11 @@ int capture_to_aac2() {
     // Find out how many samples have been captured
     iSamplesAvailable = audioCollector.availableSamples();
 
-    D_LOG("Samples available: {} ? {}", iSamplesAvailable, (BUFFERSIZE / blockAlign));
+    D_LOG("Samples available: {}", iSamplesAvailable);
 
     // When we have enough data to fill our BUFFERSIZE byte buffer, grab the samples
-    if (iSamplesAvailable > (BUFFERSIZE / blockAlign)) {
-      int dataOut = audioCollector.captureSamples(
-          (uint8_t *)Buffer, BUFFERSIZE, BUFFERSIZE / blockAlign);
-      D_LOG("dataOut: {}", dataOut);
-      wav_write_data(wavWriter, (unsigned char *)&Buffer, dataOut);
+    if (iSamplesAvailable > FRAME_SIZE) {
+      encodeSamplesAndProcess(FRAME_SIZE);
     }
   }
 
@@ -64,20 +80,15 @@ int capture_to_aac2() {
   iSamplesAvailable = audioCollector.availableSamples();
 
   while (iSamplesAvailable) {
-    if (iSamplesAvailable > (BUFFERSIZE / blockAlign)) {
-      int dataOut = audioCollector.captureSamples(
-          (uint8_t *)Buffer, BUFFERSIZE, BUFFERSIZE / blockAlign);
-      wav_write_data(wavWriter, (unsigned char *)&Buffer, dataOut);
-      iSamplesAvailable -= (BUFFERSIZE / blockAlign);
+    if (iSamplesAvailable > FRAME_SIZE) {
+      encodeSamplesAndProcess(FRAME_SIZE);
+      iSamplesAvailable -= FRAME_SIZE;
     } else {
-      int dataOut =
-          audioCollector.captureSamples((uint8_t *)Buffer, BUFFERSIZE, iSamplesAvailable);
-      wav_write_data(wavWriter, (unsigned char *)&Buffer, dataOut);
+      encodeSamplesAndProcess(iSamplesAvailable, true);
       iSamplesAvailable = 0;
     }
   }
 
-  wav_write_close(wavWriter);
   audioCollector.close();
 
 

@@ -134,12 +134,11 @@ class AudioCollector {
     return iSamplesAvailable;
   }
 
-  size_t captureSamples(uint8_t *buf, size_t bufSize, int sampleNumber) {
+  size_t captureSamples(uint8_t *buf, size_t bufSize, uint16_t sampleNumber) {
     size_t outSize = sampleNumber * blockAlign;
     if (outSize > bufSize) {
       throw std::runtime_error(
-          fmt::format("bufSize[{}] is too small to get {} samples", bufSize, sampleNumber)
-              .c_str());
+          fmt::format("bufSize[{}] is too small to get {} samples", bufSize, sampleNumber));
     }
     alcCaptureSamples(pCaptureDevice, buf, sampleNumber);
     return outSize;

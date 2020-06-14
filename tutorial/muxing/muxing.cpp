@@ -246,6 +246,11 @@ static void open_audio(AVFormatContext *oc, AVCodec *codec, OutputStream *ost,
   else
     nb_samples = c->frame_size;
 
+
+  std::cout << "----------  audio fmt: " << ost->enc->sample_fmt << std::endl;
+  std::cout << "----------  audio frame_size: " << ost->enc->frame_size << std::endl;
+
+
   ost->frame = alloc_audio_frame(c->sample_fmt, c->channel_layout, c->sample_rate, nb_samples);
   ost->tmp_frame =
       alloc_audio_frame(AV_SAMPLE_FMT_S16, c->channel_layout, c->sample_rate, nb_samples);
