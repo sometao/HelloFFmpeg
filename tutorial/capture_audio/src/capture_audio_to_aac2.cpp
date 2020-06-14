@@ -17,7 +17,7 @@
 
 
 
-int capture_to_wav2() {
+int capture_to_aac2() {
   ALchar Buffer[BUFFERSIZE];
 
   const int channels = 1;
@@ -26,6 +26,8 @@ int capture_to_wav2() {
   const int blockAlign = channels * bitsPerSample / 8;
 
   AudioCollector audioCollector(BUFFERSIZE, sampleRate, bitsPerSample, channels);
+  AacAdtsEncoder encoder(64000, AV_SAMPLE_FMT_S16, 44100, 1);
+
 
   audioCollector.open();
 

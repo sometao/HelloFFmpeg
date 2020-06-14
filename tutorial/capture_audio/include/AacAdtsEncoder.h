@@ -22,12 +22,41 @@ extern "C" {
 #include "libswresample/swresample.h"
 }
 
-
+//TODO to be test.
 
 class AacAdtsEncoder {
  private:
   AVCodecContext *codecCtx;
   std::list<AVPacket *> pktList{};
+  AVFrame *tmpFrame;
+
+  int bitsPerSample;
+
+  static AVFrame *allocAudioFrame(enum AVSampleFormat sample_fmt, uint64_t channel_layout,
+                                  int sample_rate, int nb_samples) {
+    AVFrame *frame = av_frame_alloc();
+    int ret;
+
+    if (!frame) {
+      throw std::runtime_error("Error allocating an audio frame");
+    }
+
+    frame->format = sample_fmt;
+    frame->channel_layout = channel_layout;
+    frame->sample_rate = sample_rate;
+    frame->nb_samples = nb_samples;
+
+    if (nb_samples) {
+      ret = av_frame_get_buffer(frame, 0);
+      if (ret < 0) {
+        throw std::runtime_error("Error allocating an audio buffer");
+      }
+    }
+
+    D_LOG("allocAudioFrame, frame->linesize[0]={}", frame->linesize[0]);
+
+    return frame;
+  }
 
  public:
   AacAdtsEncoder(int64_t bitRate = 64000,
@@ -57,10 +86,36 @@ class AacAdtsEncoder {
       throw std::runtime_error(fmt::format("channels must be 1 or 2, but got [{}]", channels));
     }
 
+    switch (sampleFmt) {
+      case AV_SAMPLE_FMT_U8:
+      case AV_SAMPLE_FMT_U8P:
+        bitsPerSample = 8;
+        break;
+      case AV_SAMPLE_FMT_S16:
+      case AV_SAMPLE_FMT_S16P:
+        bitsPerSample = 16;
+        break;
+      case AV_SAMPLE_FMT_S32:
+      case AV_SAMPLE_FMT_FLT:
+      case AV_SAMPLE_FMT_NONE:
+      case AV_SAMPLE_FMT_DBL:
+      case AV_SAMPLE_FMT_S32P:
+      case AV_SAMPLE_FMT_FLTP:
+      case AV_SAMPLE_FMT_DBLP:
+      case AV_SAMPLE_FMT_S64:
+      case AV_SAMPLE_FMT_S64P:
+      case AV_SAMPLE_FMT_NB:
+        throw std::runtime_error(fmt::format("unsupported fmt: {}", sampleFmt));
+      default:
+        throw std::runtime_error(fmt::format("unknown fmt: {}", sampleFmt));
+    }
+
     if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
       throw std::runtime_error(fmt::format("Could not open codec: {}", codec->name));
     }
 
+    tmpFrame =
+        allocAudioFrame(sampleFmt, codecCtx->channel_layout, sampleRate, codecCtx->frame_size);
 
     D_LOG("codecCtx->frame_size = {}", codecCtx->frame_size);
   }
@@ -70,20 +125,29 @@ class AacAdtsEncoder {
     if (codecCtx != nullptr) {
       avcodec_free_context(&codecCtx);
     }
+    if (tmpFrame != nullptr) {
+      av_frame_free(&tmpFrame);
+    }
   }
 
   /*
-   * @return 0 on success, otherwise negative error code:
-   *      AVERROR(EAGAIN):   output is not available in the current state - user
-   *                         must try to send input
-   *      AVERROR_EOF:       the encoder has been fully flushed, and there will be
-   *                         no more output packets
-   *      AVERROR(EINVAL):   codec not opened, or it is an encoder
-   *      other errors: legitimate decoding errors
+   * PCM format :https://blog.csdn.net/haima1998/article/details/49103055
+   * @return 1 got pkt,
+   *         0 no pkt got.
    */
-  int encode(AVFrame *f) {
+  int encode(uint8_t *buf, const size_t bufSize) {
+    size_t expectedSize = getFrameSize() * codecCtx->channels * bitsPerSample / 8;
+
+    if (bufSize != expectedSize) {
+      throw std::runtime_error(
+          fmt::format("encode error: bufSize[{}] != expectedSize[{}]", bufSize, expectedSize));
+    }
+
+    // fill data into frame.
+    memcpy((int8_t *)tmpFrame->data[0], buf, bufSize);
+
     static AVPacket *tmpPkt;
-    avcodec_send_frame(codecCtx, f);
+    avcodec_send_frame(codecCtx, tmpFrame);
     if (tmpPkt == nullptr) {
       tmpPkt = av_packet_alloc();
     }
@@ -125,6 +189,5 @@ class AacAdtsEncoder {
     return rstPkt;
   }
 
-
-
+  int getFrameSize() { return codecCtx->frame_size; }
 };
