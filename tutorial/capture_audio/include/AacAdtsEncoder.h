@@ -1,3 +1,8 @@
+/**
+@author Tao Zhang
+@since 2020/6/8
+@version 0.0.1-SNAPSHOT 2020/6/15
+*/
 #pragma once
 
 #ifndef SPDLOG_ACTIVE_LEVEL
@@ -51,7 +56,7 @@ class AacAdtsEncoder {
     if (nb_samples) {
       ret = av_frame_get_buffer(frame, 0);
       if (ret < 0) {
-        throw std::runtime_error("Error allocating an audio buffer");
+        throw std::runtime_error("AacAdtsEncoder: Error allocating an audio buffer");
       }
     }
 
@@ -67,7 +72,7 @@ class AacAdtsEncoder {
                  int channels = 1 /*only support 1 and 2*/) {
     AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_AAC);
     if (codec == nullptr) {
-      throw std::runtime_error(fmt::format("Could not find codec:{}", (int)AV_CODEC_ID_AAC));
+      throw std::runtime_error(fmt::format("AacAdtsEncoder. Could not find codec:{}", (int)AV_CODEC_ID_AAC));
     }
 
 
@@ -88,7 +93,7 @@ class AacAdtsEncoder {
     } else if (channels == 2) {
       codecCtx->channel_layout = AV_CH_LAYOUT_STEREO;
     } else {
-      throw std::runtime_error(fmt::format("channels must be 1 or 2, but got [{}]", channels));
+      throw std::runtime_error(fmt::format("AacAdtsEncoder: channels must be 1 or 2, but got [{}]", channels));
     }
 
     //FIXME need resamples
@@ -98,6 +103,7 @@ class AacAdtsEncoder {
     switch (sampleFmt) {
       case AV_SAMPLE_FMT_FLTP:
         bitsPerSample = 32;
+        break;
       case AV_SAMPLE_FMT_U8:
       case AV_SAMPLE_FMT_U8P:
       case AV_SAMPLE_FMT_S16:
@@ -111,13 +117,13 @@ class AacAdtsEncoder {
       case AV_SAMPLE_FMT_S64:
       case AV_SAMPLE_FMT_S64P:
       case AV_SAMPLE_FMT_NB:
-        throw std::runtime_error(fmt::format("unsupported fmt: {}", sampleFmt));
+        throw std::runtime_error(fmt::format("AacAdtsEncoder: unsupported fmt: {}", sampleFmt));
       default:
-        throw std::runtime_error(fmt::format("unknown fmt: {}", sampleFmt));
+        throw std::runtime_error(fmt::format("AacAdtsEncoder: unknown fmt: {}", sampleFmt));
     }
 
     if (avcodec_open2(codecCtx, codec, nullptr) < 0) {
-      throw std::runtime_error(fmt::format("Could not open codec: {}", codec->name));
+      throw std::runtime_error(fmt::format("AacAdtsEncoder: Could not open codec: {}", codec->name));
     }
 
     tmpFrame =
@@ -143,16 +149,16 @@ class AacAdtsEncoder {
    */
   int encode(uint8_t *buf, const size_t bufSize, bool endOfStream = false) {
     if (finished) {
-      throw std::runtime_error("data stream has been finished.");
+      throw std::runtime_error("AacAdtsEncoder: data stream has been finished.");
     }
 
     static AVPacket *tmpPkt;
-    size_t expectedSize = getFrameSize() * codecCtx->channels * bitsPerSample / 8;
 
-    if (bufSize != expectedSize) {
-      throw std::runtime_error(
-          fmt::format("encode error: bufSize[{}] != expectedSize[{}]", bufSize, expectedSize));
-    }
+    //size_t expectedSize = getFrameSize() * codecCtx->channels * bitsPerSample / 8;
+    //if (bufSize != expectedSize) {
+    //  throw std::runtime_error(
+    //      fmt::format("AacAdtsEncoder: encode error: bufSize[{}] != expectedSize[{}]", bufSize, expectedSize));
+    //}
 
     // fill data into frame.
     memcpy((int8_t *)tmpFrame->data[0], buf, bufSize);
@@ -160,17 +166,17 @@ class AacAdtsEncoder {
     int ret;
     ret = avcodec_send_frame(codecCtx, tmpFrame);
     if (ret == AVERROR(EAGAIN)) {
-      throw std::runtime_error("input is not accepted in the current state");
+      throw std::runtime_error("AacAdtsEncoder: input is not accepted in the current state");
     } else if (ret == AVERROR_EOF) {
       throw std::runtime_error(
           "the encoder has been flushed, and no new frames can be sent to it");
     } else if (ret == AVERROR(EINVAL)) {
       throw std::runtime_error(
-          "codec not opened, refcounted_frames not set, it is a decoder, or requires flush");
+          "AacAdtsEncoder: codec not opened, refcounted_frames not set, it is a decoder, or requires flush");
     } else if (ret == AVERROR(ENOMEM)) {
       throw std::runtime_error("failed to add packet to internal queue, or similar");
     } else if (ret < 0) {
-      throw std::runtime_error("legitimate decoding errors: " + ret);
+      throw std::runtime_error("AacAdtsEncoder: legitimate decoding errors: " + ret);
     }
 
     if (endOfStream) {
@@ -193,9 +199,9 @@ class AacAdtsEncoder {
       W_LOG("the encoder has been fully flushed, and there will be no more output packet");
       return 0;
     } else if (ret == AVERROR(EINVAL)) {
-      throw std::runtime_error("codec not opened, or it is an encoder");
+      throw std::runtime_error("AacAdtsEncoder: codec not opened, or it is an encoder");
     } else {
-      throw std::runtime_error(fmt::format("legitimate decoding errors: {}", ret));
+      throw std::runtime_error(fmt::format("AacAdtsEncoder: legitimate decoding errors: {}", ret));
     }
   }
 
@@ -217,9 +223,9 @@ class AacAdtsEncoder {
         W_LOG("the encoder has been fully flushed, and there will be no more output packets");
         rstPkt = nullptr;
       } else if (ret == AVERROR(EINVAL)) {
-        throw std::runtime_error("codec not opened, or it is an encoder");
+        throw std::runtime_error("AacAdtsEncoder: codec not opened, or it is an encoder");
       } else {
-        throw std::runtime_error("legitimate decoding errors");
+        throw std::runtime_error("AacAdtsEncoder: legitimate decoding errors");
       }
     } else {
       rstPkt = pktList.front();

@@ -48,7 +48,7 @@ add_executable( ${PROJECT_NAME}
 	"src/capture_audio_to_wav.cpp" 
 	"src/capture_audio_to_aac.cpp" 
 	"main.cpp"
- "src/capture_audio_to_wav2.cpp" "include/ffMuxing.h" "src/capture_audio_to_aac2.cpp" "include/AacAdtsEncoder.h")
+ "src/capture_audio_to_wav2.cpp" "include/ffMuxing.h" "src/capture_audio_to_aac2.cpp" "include/AacAdtsEncoder.h" "include/ReSampler.h")
 
 target_include_directories( ${PROJECT_NAME}
 	PUBLIC 

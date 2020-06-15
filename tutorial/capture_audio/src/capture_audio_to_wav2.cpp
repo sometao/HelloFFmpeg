@@ -23,7 +23,7 @@ int capture_to_wav2() {
   const int bitsPerSample = 16;
   const int blockAlign = channels * bitsPerSample / 8;
 
-  AudioCollector audioCollector(BUFFERSIZE, sampleRate, bitsPerSample, channels);
+  AudioCollector audioCollector(BUFFERSIZE, sampleRate, AL_FORMAT_MONO16);
 
   audioCollector.open();
 

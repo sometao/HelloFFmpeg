@@ -16,7 +16,9 @@
 - [X] 采集音频并保存成PCM
 - [X] 采集音频并保存为aac
 - [X] 将openAL采集流程封装成一个类
-- [ ] 将ffmpeg muxing过程封装成一个类
+- [X] 引入Resample类
+- [X] 将ffmpeg AAC编码过程封装为一个类
+- [ ] 给AAC编码添加 ADTS 头：https://blog.csdn.net/chailongger/article/details/84376914
 - [ ] 使用ffmpeg muxing api对音频进行封装
 
 

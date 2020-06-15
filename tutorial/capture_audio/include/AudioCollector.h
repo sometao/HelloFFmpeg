@@ -1,3 +1,8 @@
+/**
+@author Tao Zhang
+@since 2020/6/12
+@version 0.0.1-SNAPSHOT 2020/6/15
+*/
 #pragma once
 
 #ifndef SPDLOG_ACTIVE_LEVEL
@@ -23,9 +28,10 @@ class AudioCollector {
   const size_t internalBufSize;
 
   const int sampleRate;
-  const int bitsPerSample;
-  const int channels;
-  const int blockAlign;
+  int bitsPerSample;
+  int channels;
+  int blockAlign;
+  ALCenum soundFormat;
 
   uint8_t *buffer = nullptr;
   ALCcontext *pContext = nullptr;
@@ -63,32 +69,13 @@ class AudioCollector {
     return std::string(s);
   }
 
-  AudioCollector(size_t bufSize_, int sampleRate_, int bitsPerSample_, int channels_,
+  AudioCollector(size_t bufSize_, int sampleRate_, ALCenum alSoundFormat,
                  std::string deviceName_ = "")
       : internalBufSize(bufSize_),
         sampleRate(sampleRate_),
-        bitsPerSample(bitsPerSample_),
-        channels(channels_),
-        blockAlign(channels_ * bitsPerSample_ / 8),
+        soundFormat(alSoundFormat),
         deviceName(deviceName_.length() > 0 ? deviceName_ : getDefaultDeviceName()) {
-    if (bitsPerSample != 8 && bitsPerSample != 16) {
-      throw std::runtime_error(fmt::format(
-          "AudioCollector init failed: bitsPerSample must be 8 or 16, bitsPerSample=[{}] is "
-          "not supported.",
-          bitsPerSample));
-    }
-
-
-    if (channels != 1 && channels != 2) {
-      throw std::runtime_error(fmt::format(
-          "AudioCollector init failed: channels must be 1 or 2, channels=[{}] is not "
-          "supported.",
-          channels));
-    }
-
-
     pContext = alcGetCurrentContext();
-
 
     if (!checkSupport()) {
       auto msg = "AudioCollector init failed: Failed to detect Capture Extension";
@@ -96,18 +83,31 @@ class AudioCollector {
       throw std::exception(msg);
     }
 
-    int format = 0;
-    if (bitsPerSample == 16 && channels == 1) {
-      format = AL_FORMAT_MONO16;
-    } else if (bitsPerSample == 16 && channels == 2) {
-      format = AL_FORMAT_STEREO16;
-    } else if (bitsPerSample == 8 && channels == 1) {
-      format = AL_FORMAT_MONO8;
-    } else if (bitsPerSample == 8 && channels == 2) {
-      format = AL_FORMAT_STEREO8;
-    } else {
-      throw std::runtime_error("It will never happened.");
+
+    switch (alSoundFormat) {
+      case AL_FORMAT_MONO8:
+        bitsPerSample = 8;
+        channels = 1;
+        break;
+      case AL_FORMAT_STEREO8:
+        bitsPerSample = 8;
+        channels = 2;
+        break;
+      case AL_FORMAT_MONO16:
+        bitsPerSample = 16;
+        channels = 1;
+        break;
+      case AL_FORMAT_STEREO16:
+        bitsPerSample = 16;
+        channels = 2;
+        break;
+      default:
+        throw std::runtime_error("Can not find al sound format: " +
+                                 std::to_string(alSoundFormat));
+        break;
     }
+
+    blockAlign = channels * bitsPerSample / 8;
 
     buffer = new uint8_t[internalBufSize];
   }
@@ -115,8 +115,7 @@ class AudioCollector {
   ~AudioCollector() { delete[] buffer; }
 
   void open() {
-    pCaptureDevice = alcCaptureOpenDevice(deviceName.c_str(), sampleRate, AL_FORMAT_MONO16,
-                                          internalBufSize);
+    pCaptureDevice = alcCaptureOpenDevice(deviceName.c_str(), sampleRate, soundFormat, internalBufSize);
 
     if (pCaptureDevice == nullptr) {
       throw std::runtime_error(

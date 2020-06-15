@@ -5,8 +5,10 @@
 
 #include <iostream>
 #include <fstream>
+#include <tuple>
 #include "AudioCollector.h"
 #include "seeker/loggerApi.h"
+#include "ReSampler.h"
 #include "AacAdtsEncoder.h"
 
 
@@ -22,11 +24,20 @@ int capture_to_aac2() {
   const int bitsPerSample = 16;
   const int blockAlign = channels * bitsPerSample / 8;
 
+
+
+
   std::cout << "capture_to_aac2 ------- 0 ----------" << std::endl;
   AacAdtsEncoder encoder(32000, AV_SAMPLE_FMT_FLTP, sampleRate, channels);
   std::cout << "capture_to_aac2 ------- 1 ----------" << std::endl;
-  AudioCollector audioCollector(FRAME_SIZE * 2 * 4, sampleRate, bitsPerSample, channels);
+  AudioCollector audioCollector(FRAME_SIZE * 2 * 4, sampleRate, AL_FORMAT_MONO16);
   std::cout << "capture_to_aac2 ------- 2 ----------" << std::endl;
+
+
+  ffmpegUtil::AudioInfo inputAudio(AV_CH_LAYOUT_MONO, sampleRate, channels, AV_SAMPLE_FMT_S16);
+  ffmpegUtil::AudioInfo outputAudio(AV_CH_LAYOUT_MONO, sampleRate, channels, AV_SAMPLE_FMT_FLTP);
+
+  ffmpegUtil::ReSampler reSampler(inputAudio, outputAudio, FRAME_SIZE);
 
   audioCollector.open();
 
@@ -43,30 +54,43 @@ int capture_to_aac2() {
 
 
   auto encodeSamplesAndProcess = [&](size_t sampleNumber, bool endOfStream = false) {
-    int dataOut =
-        audioCollector.captureSamples(buffer, sampleNumber * blockAlign, sampleNumber);
-    int gotPkt = encoder.encode(buffer, sampleNumber * blockAlign, endOfStream);
+    int capturedDataSize =
+        audioCollector.captureSamples(buffer, FRAME_SIZE * 2, sampleNumber);
+
+    //D_LOG("captureSamples done. sampleNumber={}, capturedDataSize={}", sampleNumber, capturedDataSize);
+
+
+    const uint8_t* d = &buffer[0];
+
+    int outSamples;
+    int outDataSize;
+    uint8_t* outData;
+    std::tie(outSamples, outData, outDataSize) = reSampler.reSample2( (const uint8_t **)&d, sampleNumber);
+
+    //D_LOG("reSample2 done. outSamples={}, outDataSize={}", outSamples, outDataSize);
+
+
+    int gotPkt = encoder.encode(outData, outDataSize, endOfStream);
     if (gotPkt) {
       AVPacket* pkt = encoder.getPacket();
-      // TODO process pkt.
       pktCount += 1;
       fout.write((char*)pkt->data, pkt->size);
       pktByteCount += pkt->size;
+      D_LOG("encodeSamplesAndProcess pkt->size={} pktCount={}, pktByteCount={}", pkt->size, pktCount, pktByteCount);
       av_packet_free(&pkt);
-      D_LOG("encodeSamplesAndProcess pktCount={}, pktByteCount={}", pktCount, pktByteCount);
     }
   };
 
   size_t iSamplesAvailable;
   // Record for 5 seconds
   auto dwStartTime = seeker::Time::currentTime();
-  while ((seeker::Time::currentTime() <= (dwStartTime + 8000))) {
+  while ((seeker::Time::currentTime() <= (dwStartTime + 5000))) {
     Sleep(2);
 
     // Find out how many samples have been captured
     iSamplesAvailable = audioCollector.availableSamples();
 
-    D_LOG("Samples available: {}", iSamplesAvailable);
+    //D_LOG("Samples available: {}", iSamplesAvailable);
 
     // When we have enough data to fill our BUFFERSIZE byte buffer, grab the samples
     if (iSamplesAvailable > FRAME_SIZE) {
